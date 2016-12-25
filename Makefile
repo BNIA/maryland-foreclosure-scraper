@@ -12,7 +12,7 @@ install:
 
 .PHONY: clean
 clean:
-	# clean out Python cache and temporary files
+	# clean out cache and temporary files
 	@find . \( -name "*.pyc" -o -name "output.csv" \) -type f -delete
 	@find . -name "*.json" -type f -delete
 	@find . -name "test_output.csv" -type f -delete

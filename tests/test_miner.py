@@ -22,6 +22,7 @@ def test_scrape():
         TEST_OUTPUT, gui=True
     )
 
+    miner_obj.scan_files()
     miner_obj.export()
 
     assert(path.isfile(TEST_OUTPUT))
