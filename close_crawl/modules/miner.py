@@ -10,7 +10,6 @@ TODO:
 """
 
 from __future__ import absolute_import, print_function, unicode_literals
-
 from csv import DictWriter
 from json import dump, dumps, load
 from os import path
@@ -32,8 +31,9 @@ class Miner(object):
         self.responses = responses
         self.output = output
         self.gui = gui
+        self.dataset = []
 
-    def scrape(self, case_num, html_data):
+    def scrape(self, html_data):
         """Scrapes the desired features
 
         Args:
@@ -68,10 +68,9 @@ class Miner(object):
         except Exception as e:
             print(e, feature_list)
 
-        return self.distribute(case_num, feature_list)
+        return feature_list
 
-    @staticmethod
-    def distribute(case_num, feature_list):
+    def distribute(self, case_num, feature_list):
 
         # break up elements with n-tuples greater than 2
         # then convert list of tuples to dict for faster lookup
@@ -106,7 +105,7 @@ class Miner(object):
             str_address = filter_addr(str(address[-1]))
 
             temp_features = {
-                key: value for key, value in feature_list.iteritems()
+                key: value for key, value in feature_list.items()
                 if key in ["Title",
                            "Case Type",
                            "Case Number",
@@ -152,10 +151,7 @@ class Miner(object):
 
         return scraped_features
 
-    def export(self):
-
-        dataset = []
-        file_exists = path.isfile(self.output)
+    def scan_files(self):
 
         case_range = trange(len(self.responses), desc='Mining', leave=True) \
             if not self.gui else range(len(self.responses))
@@ -165,28 +161,30 @@ class Miner(object):
                 HTML_FILE.format(case=self.responses[file_name]), 'r'
             ) as html_src:
 
-                row = self.scrape(self.responses[file_name], html_src.read())
-
                 if not self.gui:
                     case_range.set_description(
                         "Mining {}".format(self.responses[file_name])
                     )
 
-                dataset.extend(row)
+                feature_list = self.scrape(html_src.read())
+                row = self.distribute(self.responses[file_name], feature_list)
+
+                self.dataset.extend(row)
+
+    def export(self):
+
+        file_exists = path.isfile(self.output)
 
         with open(self.output, 'a') as csv_file:
             writer = DictWriter(
                 csv_file,
                 fieldnames=[
-                    col for col in FIELDS if col not in [
-                        'Business or Organization Name',
-                        'Party Type',
-                    ]
+                    col for col in FIELDS if col not in INTERNAL_FIELDS
                 ]
             )
 
             if not file_exists:
                 writer.writeheader()
 
-            for row in dataset:
+            for row in self.dataset:
                 writer.writerow(row)
